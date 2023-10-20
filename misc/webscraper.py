@@ -11,10 +11,10 @@ stub = modal.Stub("example-linkscraper")
 playwright_image = modal.Image.debian_slim(
     python_version="3.10"
 ).run_commands(  # Doesn't work with 3.11 yet
+    "apt-get update",
     "apt-get install -y software-properties-common",
     "apt-add-repository non-free",
     "apt-add-repository contrib",
-    "apt-get update",
     "pip install playwright==1.30.0",
     "playwright install-deps chromium",
     "playwright install chromium",
@@ -57,14 +57,14 @@ def scrape():
 
     for links in get_links.map(links_of_interest):
         for link in links:
-            bot_token_msg.call("scraped-links", link)
+            bot_token_msg.remote("scraped-links", link)
 
 
 @stub.function(schedule=modal.Period(days=1))
 def daily_scrape():
-    scrape.call()
+    scrape.remote()
 
 
 @stub.local_entrypoint()
 def run():
-    scrape.call()
+    scrape.remote()

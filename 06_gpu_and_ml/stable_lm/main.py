@@ -4,10 +4,9 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, Union
 
+import modal
 from pydantic import BaseModel
 from typing_extensions import Annotated, Literal
-
-import modal
 
 requirements_txt_path = Path(__file__).resolve().parent / "requirements.txt"
 requirements_data = base64.b64encode(
@@ -260,7 +259,7 @@ async def completions(completion_request: CompletionRequest):
                     choices=[
                         Choice(
                             index=0,
-                            text=StabilityLM().generate.call(
+                            text=StabilityLM().generate.remote(
                                 completion_request=completion_request
                             ),
                         )
@@ -272,7 +271,7 @@ async def completions(completion_request: CompletionRequest):
         )
 
     def wrapped_stream():
-        for new_text in StabilityLM().generate_stream.call(
+        for new_text in StabilityLM().generate_stream.remote(
             completion_request=completion_request
         ):
             yield msgspec.json.encode(
@@ -308,7 +307,7 @@ def main():
         print(f"{q_style}{q}{q_end}\n{a}\n\n")
 
     print("Running example streaming completion:\n")
-    for part in StabilityLM().generate_stream.call(
+    for part in StabilityLM().generate_stream.remote_gen(
         CompletionRequest(
             prompt="Generate a list of ten sure-to-be unicorn AI startup names.",
             max_tokens=128,

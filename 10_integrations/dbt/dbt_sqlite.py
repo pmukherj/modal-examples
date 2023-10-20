@@ -1,28 +1,36 @@
 # ---
-# cmd: ["modal", "run", "10_integrations.dbt.modal_dbt::run"]
+# cmd: ["modal", "run", "10_integrations/dbt/dbt_sqlite.py::run"]
 # ---
+#
+# This is a simple demonstration of how to run a dbt-core project on Modal
+# using the dbt-sqlite adapter.
+#
+# The underlying DBT data and models are from https://docs.getdbt.com/docs/get-started/getting-started-dbt-core
+# To run this example, first run the meltano example in `10_integrations/meltano/` to load the required data
+# into sqlite.
+#
+# **Run this example:**
+#
+# ```
+# modal run dbt_sqlite.py::stub.run
+# ```
+#
+# **Launch an interactive sqlite3 shell on the output database:**
+#
+# ```
+# modal run dbt_sqlite.py::stub.explore
+# ```
 
-"""This is a simple demonstration of how to run a dbt-core project on Modal
-
-The underlying DBT data and models are from https://docs.getdbt.com/docs/get-started/getting-started-dbt-core
-To run this example, first run the meltano example in 10_integrations/meltano to load the required data
-into sqlite.
-
-To run this example:
-`modal run modal_dbt.py::stub.run`
-
-To launch an interactive sqlite3 shell on the output database:
-`modal run modal_dbt.py::stub.explore`
-"""
 
 import os
 import subprocess
+import sys
 import typing
 from pathlib import Path
 
 import modal
 
-LOCAL_DBT_PROJECT = Path(__file__).parent / "sample_proj"
+LOCAL_DBT_PROJECT = Path(__file__).parent / "sample_proj_sqlite"
 REMOTE_DBT_PROJECT = "/sample_proj"
 RAW_SCHEMAS = "/raw"
 OUTPUT_SCHEMAS = "/db"
@@ -38,7 +46,7 @@ dbt_env = modal.Secret.from_dict(
 
 image = (
     modal.Image.debian_slim()
-    .pip_install("dbt-sqlite")
+    .pip_install("dbt-core~=1.3.0", "dbt-sqlite~=1.3.0")
     .run_commands("apt-get install -y git")
 )
 
@@ -58,21 +66,23 @@ stub = modal.Stub(image=image, mounts=[project_mount], secrets=[dbt_env])
 )
 def dbt_cli(subcommand: typing.List):
     os.chdir(REMOTE_DBT_PROJECT)
-    subprocess.check_call(["dbt"] + subcommand)
+    cmd = ["dbt"] + subcommand
+    print(f"Running {' '.join(cmd)} against {REMOTE_DBT_PROJECT}")
+    subprocess.check_call(cmd)
 
 
 @stub.local_entrypoint()
 def run():
-    dbt_cli.call(["run"])
+    dbt_cli.remote(["run"])
 
 
 @stub.local_entrypoint()
 def debug():
-    dbt_cli.call(["debug"])
+    dbt_cli.remote(["debug"])
 
 
 @stub.function(
-    interactive=True,
+    interactive=sys.stdout.isatty(),
     network_file_systems={RAW_SCHEMAS: raw_volume, OUTPUT_SCHEMAS: db_volume},
     timeout=86400,
     image=modal.Image.debian_slim().apt_install("sqlite3"),

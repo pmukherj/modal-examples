@@ -20,6 +20,7 @@
 import io
 import os
 import sys
+
 import modal
 from fastapi import FastAPI, Response
 from pydantic import BaseModel
@@ -170,8 +171,8 @@ def _inference(
 # which include all required drivers.
 
 image = (
-    modal.Image.from_dockerhub(
-        "nvidia/cuda:12.1.1-devel-ubuntu22.04",
+    modal.Image.from_registry(
+        "nvidia/cuda:12.2.0-devel-ubuntu22.04",
         setup_dockerfile_commands=[
             "RUN apt-get update && apt-get install -y git python3-pip",
             "RUN ln -s /usr/bin/python3 /usr/bin/python",
@@ -265,7 +266,7 @@ def inference_asgi():
 #      --header 'Content-Type: application/json' \
 #      --data-raw '{
 #         "prompt": "photo of a wolf in the snow, blue eyes, highly detailed, 8k, 200mm canon lens, shallow depth of field",
-#         "num_inference_steps": 10
+#         "num_inference_steps": 10,
 #         "guidance_scale": 10.0,
 #         "negative_prompt": "deformed, extra legs, no tail",
 #         "format": "webp"

@@ -1,7 +1,5 @@
 # ---
-# cmd: ["modal", "run", "vision_model_training.py::stub.train"]
 # deploy: true
-# integration-test: false
 # lambda-test: false
 # ---
 #
@@ -29,12 +27,11 @@ import sys
 from typing import List, Optional, Tuple
 
 from fastapi import FastAPI
-
 from modal import (
     Image,
     Mount,
-    Secret,
     NetworkFileSystem,
+    Secret,
     Stub,
     asgi_app,
     method,
@@ -101,7 +98,7 @@ def download_dataset():
     return path
 
 
-# ## Training a vision model with FastAI.
+# ## Training a vision model with FastAI
 #
 # To address the CIFAR-10 image classification problem, we use the high-level fastAI framework
 # to train a Deep Residual Network (https://arxiv.org/pdf/1512.03385.pdf) with 18-layers, called `resnet18`.
@@ -163,7 +160,7 @@ def train():
     wandb_enabled = bool(os.environ.get("WANDB_API_KEY"))
     if wandb_enabled:
         wandb.init(
-            id=stub.app.app_id,
+            id=stub.app_id,
             project=config.wandb.project,
             entity=config.wandb.entity,
         )
@@ -249,7 +246,7 @@ def classify_url(image_url: str) -> None:
         raise RuntimeError(f"Could not download '{image_url}'")
 
     classifier = ClassifierModel()
-    label = classifier.predict.call(image=r.content)
+    label = classifier.predict.remote(image=r.content)
     print(f"Classification: {label}")
 
 
@@ -302,7 +299,7 @@ def fastapi_app():
 
     classifier = ClassifierModel()
     interface = gr.Interface(
-        fn=classifier.predict.call,
+        fn=classifier.predict.remote,
         inputs=gr.Image(shape=(224, 224)),
         outputs="label",
         examples=create_demo_examples(),

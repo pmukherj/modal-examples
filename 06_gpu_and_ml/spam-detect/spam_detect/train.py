@@ -24,9 +24,7 @@ from datetime import timedelta
 
 import modal
 
-from . import config
-from . import dataset
-from . import models
+from . import config, dataset, models
 from .app import stub
 
 
@@ -77,7 +75,7 @@ def fetch_git_commit_hash(allow_dirty: bool) -> str:
 @stub.function(volumes={config.VOLUME_DIR: stub.volume})
 def init_volume():
     config.MODEL_STORE_DIR.mkdir(parents=True, exist_ok=True)
-    stub.app.volume.commit()  # Persist changes
+    stub.volume.commit()  # Persist changes
 
 
 @stub.function(
@@ -89,7 +87,7 @@ def prep_dataset():
     datasets_path = config.DATA_DIR
     datasets_path.mkdir(parents=True, exist_ok=True)
     dataset.download(base=datasets_path, logger=logger)
-    stub.app.volume.commit()  # Persist changes
+    stub.volume.commit()  # Persist changes
 
 
 @stub.function(
@@ -110,7 +108,7 @@ def train(
         model_registry_root=config.MODEL_STORE_DIR,
         git_commit_hash=git_commit_hash,
     )
-    stub.app.volume.commit()  # Persist changes
+    stub.volume.commit()  # Persist changes
     logger.info(f"saved model to model store. {model_id=}")
     # Reload the model
     logger.info("🔁 testing reload of model")
@@ -141,7 +139,7 @@ def train_gpu(
         model_registry_root=config.MODEL_STORE_DIR,
         git_commit_hash=git_commit_hash,
     )
-    stub.app.volume.commit()  # Persist changes
+    stub.volume.commit()  # Persist changes
     logger.info(f"saved model to model store. {model_id=}")
 
 
@@ -160,19 +158,19 @@ def main(git_commit_hash: str, model_type=config.ModelType.BAD_WORDS):
         f"💪 training a {model_type} model at git commit {git_commit_hash[:8]}"
     )
     if model_type == config.ModelType.NAIVE_BAYES:
-        train.call(
+        train.remote(
             model=models.NaiveBayes(),
             dataset_path=dataset_path,
             git_commit_hash=git_commit_hash,
         )
     elif model_type == config.ModelType.LLM:
-        train_gpu.call(
+        train_gpu.remote(
             model=models.LLM(),
             dataset_path=dataset_path,
             git_commit_hash=git_commit_hash,
         )
     elif model_type == config.ModelType.BAD_WORDS:
-        train.call(
+        train.remote(
             model=models.BadWords(),
             dataset_path=dataset_path,
             git_commit_hash=git_commit_hash,
@@ -196,8 +194,8 @@ def train_model(model_type: str):
     model_type_val = config.ModelType(model_type)
     # All training runs are versioned against git repository state.
     git_commit_hash: str = fetch_git_commit_hash(allow_dirty=False)
-    init_volume.call()
-    main.call(
+    init_volume.remote()
+    main.remote(
         git_commit_hash=git_commit_hash,
         model_type=model_type_val,
     )
