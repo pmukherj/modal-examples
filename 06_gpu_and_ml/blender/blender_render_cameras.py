@@ -33,9 +33,14 @@ stub = modal.Stub(
     image=image
 )
 
+stub.volume = modal.Volume.new()
+
+
 blenderpath = '/usr/local/blender/blender '
 flags = ' -b -P '
 render_script = "/tmp/render_all_cameras.py"
+
+
 
 def download_file(name, url):
     local_filename = f"/tmp/{name}"
@@ -52,7 +57,8 @@ def download_file(name, url):
         return -1    
     return local_filename
 
-
+@stub.function(timeout=36000, \
+               volumes = {"/data/": stub.volume})
 def download_blenderfile(identifier, url):
     local_filename = f"/tmp/{identifier}/scene.blend"
     try:
@@ -74,7 +80,7 @@ def get_value_btwn_markers(test_str):
     for marker in potential_markers:
         val = None
         s_marker = marker + ':'
-        e_marker = ':' + marker
+        e_marker = ':' + marker                                                                                     
 
         # getting index of substrings
         idx1 = test_str.find(s_marker)
@@ -102,6 +108,7 @@ def render_file (filepath):
 
 #####Render Function######
 @stub.function(timeout=36000, \
+               volumes = {"/data/": stub.volume},
                mounts=[modal.Mount.from_local_file(\
                             "render_all_cameras.py", \
                             remote_path="/tmp/render_all_cameras.py")], \
@@ -118,7 +125,7 @@ def render (remote_path, identifier):
     filename = download_blenderfile(identifier, remote_path)
     if (os.path.isfile(filename)):
         print (f"file downloaded at {filename}")
-        render_file(filename)
+        #render_file(filename)
 
 
     
@@ -126,6 +133,3 @@ def render (remote_path, identifier):
 def main():
     render.call(files[0].get('url'), files[0].get('identifier'))
 
-# if __name__ == "__main__":
-#     print ("test")
-#     render(files[0].get('url'), files[0].get('identifier'))
