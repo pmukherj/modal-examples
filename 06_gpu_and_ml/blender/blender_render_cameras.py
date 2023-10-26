@@ -35,12 +35,9 @@ stub = modal.Stub(
 
 stub.volume = modal.Volume.new()
 
-
 blenderpath = '/usr/local/blender/blender '
 flags = ' -b -P '
 render_script = "/tmp/render_all_cameras.py"
-
-
 
 def download_file(name, url):
     local_filename = f"/tmp/{name}"
@@ -110,8 +107,11 @@ def render_file (filepath):
 @stub.function(timeout=36000, \
                volumes = {"/data/": stub.volume},
                mounts=[modal.Mount.from_local_file(\
-                            "render_all_cameras.py", \
-                            remote_path="/tmp/render_all_cameras.py")], \
+                            "render_camera.py", \
+                            remote_path="/tmp/render_camera.py"),
+                       modal.Mount.from_local_file(\
+                            "get_camera_names.py", \
+                            remote_path="/tmp/get_camera_names.py")], \
                gpu = "any") #leaving timeout at 10hrs now
 def render (remote_path, identifier):
 
